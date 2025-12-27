@@ -7,13 +7,16 @@ import { configDotenv } from 'dotenv';
 
 import indexRouter from './routes/index.js';
 import usersRouter from './routes/users.js';
+import { connectMongodb } from './utils/connectMongodb.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const app = express();
-
+// Global setup
 configDotenv();
+await connectMongodb();
+
+const app = express();
 
 app.use(logger('dev'));
 app.use(express.json());
