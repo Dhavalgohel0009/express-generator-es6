@@ -3,18 +3,36 @@ import path from 'path';
 import cookieParser from 'cookie-parser';
 import logger from 'morgan';
 import { fileURLToPath } from 'url';
-import { configDotenv } from 'dotenv';
+import 'dotenv/config';
+import MongoStore from 'connect-mongo';
+import swaggerUi from 'swagger-ui-express';
+import session from 'express-session';
 
 import indexRouter from './routes/index.js';
 import usersRouter from './routes/users.js';
 import { connectMongodb } from './utils/connectMongodb.js';
+import { swaggerSpecs } from './swagger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Global setup
-configDotenv();
 await connectMongodb();
+const sessionConfig = {
+  secret: process.env.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: true,
+  store: MongoStore.create({
+    mongoUrl: process.env.MONGO_URL,
+    touchAfter: 60 * 60 * 24 * 1000, // 1DAY,
+    autoRemove: 'native'
+  }),
+  cookie: {
+    secure: process.env.ENVIRONMENT == "PRODUCTION",
+    httpOnly: true,
+    maxAge: 60 * 60 * 24 * 1000,
+  }
+}
 
 const app = express();
 
@@ -24,6 +42,10 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Session cookie config
+app.use(session(sessionConfig))
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
 
